@@ -2,7 +2,7 @@
 
 Financial covenant compliance workflow - POC
 
-**Live:** `https://covenant-eight.vercel.app`
+**Live:** [https://covenant-eight.vercel.app](https://covenant-eight.vercel.app)
 
 **Repo:** [https://github.com/RadifMasud/Covenant](https://github.com/RadifMasud/Covenant)
 
