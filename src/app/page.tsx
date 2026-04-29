@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { setSessionEmail, getSessionEmail } from "@/lib/session";
 import { trackEvent } from "@/lib/trackEvent";
@@ -18,11 +18,14 @@ export default function EmailGatePage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (getSessionEmail()) {
       router.replace("/workflow");
+      return;
     }
+    inputRef.current?.focus();
   }, [router]);
 
   function handleSubmit(e: React.FormEvent) {
@@ -56,6 +59,7 @@ export default function EmailGatePage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1">
                 <Input
+                  ref={inputRef}
                   type="email"
                   placeholder="you@company.com"
                   value={email}
@@ -66,7 +70,6 @@ export default function EmailGatePage() {
                       length: e.target.value.length,
                     });
                   }}
-                  autoFocus
                 />
                 {error && (
                   <p className="text-sm text-destructive">{error}</p>

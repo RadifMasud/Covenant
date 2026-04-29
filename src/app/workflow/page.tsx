@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getSessionEmail, clearSession } from "@/lib/session";
-import { trackEvent } from "@/lib/trackEvent";
+import { trackEvent, getSessionEvents } from "@/lib/trackEvent";
 import { Sidecar } from "@/components/Sidecar";
+import { type EinsteinState, EINSTEIN_INITIAL_STATE } from "@/lib/types/einstein";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -43,6 +44,7 @@ export default function WorkflowPage() {
   const [sessionEmail, setSessionEmail] = useState("");
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const stepStartTime = useRef<number>(Date.now());
+  const [einsteinState, setEinsteinState] = useState<EinsteinState>(EINSTEIN_INITIAL_STATE);
 
   const [state, setState] = useState<WorkflowState>({
     docType: "",
@@ -102,8 +104,51 @@ export default function WorkflowPage() {
 
   function handleReset() {
     clearSession();
+    setEinsteinState(EINSTEIN_INITIAL_STATE);
     trackEvent("workflow", "session_ended", { sessionEmail });
     router.replace("/");
+  }
+
+  async function handleAnalyzeNow() {
+    setEinsteinState({ status: "loading", text: null, safetyScores: null, error: null });
+
+    const events = getSessionEvents();
+    const payload = {
+      eventdata: JSON.stringify({
+        events,
+        workflowState: {
+          docType: state.docType,
+          scanQuality: state.scanQuality,
+          debtToEquityRatio,
+        },
+      }),
+    };
+
+    try {
+      const res = await fetch("/api/sfdc/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Request failed");
+      }
+
+      const data = await res.json();
+      setEinsteinState({
+        status: "success",
+        text: data.text,
+        safetyScores: data.safetyScores,
+        error: null,
+      });
+      trackEvent("sidecar", "einstein_analyze_success", { step });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "AI analysis unavailable";
+      setEinsteinState({ status: "error", text: null, safetyScores: null, error: message });
+      trackEvent("sidecar", "einstein_analyze_error", { step, message });
+    }
   }
 
   const canAdvanceStep1 = state.docType !== "";
@@ -453,6 +498,8 @@ export default function WorkflowPage() {
           scanQuality={state.scanQuality}
           debtToEquityRatio={debtToEquityRatio}
           sessionEmail={sessionEmail}
+          einsteinState={einsteinState}
+          onAnalyzeNow={handleAnalyzeNow}
         />
       </div>
     </div>

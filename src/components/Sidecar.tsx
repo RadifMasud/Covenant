@@ -5,12 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trackEvent } from "@/lib/trackEvent";
+import type { EinsteinState } from "@/lib/types/einstein";
 
 interface SidecarProps {
   step: number;
   scanQuality: "Good" | "Poor";
   debtToEquityRatio: number | null;
   sessionEmail: string;
+  einsteinState: EinsteinState;
+  onAnalyzeNow: () => void;
 }
 
 export function Sidecar({
@@ -18,17 +21,32 @@ export function Sidecar({
   scanQuality,
   debtToEquityRatio,
   sessionEmail,
+  einsteinState,
+  onAnalyzeNow,
 }: SidecarProps) {
   const [manualReviewAcked, setManualReviewAcked] = useState(false);
   const [highRiskEscalated, setHighRiskEscalated] = useState(false);
 
   const isHighRisk = step === 3 && debtToEquityRatio !== null && debtToEquityRatio > 2.5;
   const isPoorQuality = scanQuality === "Poor";
-
   const hasNudge = isHighRisk || isPoorQuality;
+  const isAnalyzing = einsteinState.status === "loading";
+
+  const safetyTooltip = einsteinState.safetyScores
+    ? [
+        `Safety: ${(einsteinState.safetyScores.safetyScore * 100).toFixed(1)}%`,
+        `Toxicity: ${(einsteinState.safetyScores.toxicityScore * 100).toFixed(1)}%`,
+        `Hate: ${(einsteinState.safetyScores.hateScore * 100).toFixed(1)}%`,
+        `Violence: ${(einsteinState.safetyScores.violenceScore * 100).toFixed(1)}%`,
+        `Physical: ${(einsteinState.safetyScores.physicalScore * 100).toFixed(1)}%`,
+        `Sexual: ${(einsteinState.safetyScores.sexualScore * 100).toFixed(1)}%`,
+        `Profanity: ${(einsteinState.safetyScores.profanityScore * 100).toFixed(1)}%`,
+      ].join("\n")
+    : "";
 
   return (
     <aside className="w-72 shrink-0 space-y-4">
+      {/* Context card */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -60,9 +78,85 @@ export function Sidecar({
               </Badge>
             </div>
           )}
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full mt-1"
+            disabled={isAnalyzing}
+            onClick={() => {
+              trackEvent("sidecar", "einstein_analyze_now", { step });
+              onAnalyzeNow();
+            }}
+          >
+            {isAnalyzing ? (
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                Analyzing...
+              </span>
+            ) : (
+              "AI Analyze Now"
+            )}
+          </Button>
         </CardContent>
       </Card>
 
+      {/* Einstein AI result card — always above nudge cards */}
+      {einsteinState.status === "loading" && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-blue-400 animate-pulse" />
+              <p className="text-sm font-semibold text-blue-800">AI Analysis in progress…</p>
+            </div>
+            <div className="space-y-2">
+              <div className="h-2.5 rounded bg-slate-200 animate-pulse w-full" />
+              <div className="h-2.5 rounded bg-slate-200 animate-pulse w-4/5" />
+              <div className="h-2.5 rounded bg-slate-200 animate-pulse w-3/5" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {einsteinState.status === "success" && einsteinState.text && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-blue-900 flex items-center gap-1.5">
+              Einstein AI
+              <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">
+                Salesforce
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <p className="text-blue-800 leading-snug max-h-40 overflow-y-auto pr-1 text-xs">
+              {einsteinState.text}
+            </p>
+            {einsteinState.safetyScores && (
+              <span
+                title={safetyTooltip}
+                className="inline-flex items-center gap-1 cursor-help text-xs bg-blue-100 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5"
+              >
+                Safety {(einsteinState.safetyScores.safetyScore * 100).toFixed(0)}%
+                <span className="text-blue-400">ⓘ</span>
+              </span>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {einsteinState.status === "error" && (
+        <Card className="border-slate-200 bg-slate-50">
+          <CardContent className="pt-4 space-y-1">
+            <p className="text-sm font-semibold text-slate-600">AI Analysis Unavailable</p>
+            <p className="text-xs text-slate-500">
+              {einsteinState.error ?? "Could not reach Einstein. Proceed manually."}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Rule-based nudge cards */}
       {hasNudge && (
         <div className="space-y-3">
           {isPoorQuality && (
@@ -150,7 +244,7 @@ export function Sidecar({
         </div>
       )}
 
-      {!hasNudge && (
+      {!hasNudge && einsteinState.status === "idle" && (
         <Card className="border-dashed">
           <CardContent className="pt-4">
             <p className="text-xs text-muted-foreground text-center">
