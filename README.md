@@ -29,7 +29,7 @@ npm run dev
 
 Two-layer validated entry point. Format check fires on blur; deep validation (MX + disposable detection) fires on submit via Abstract API. Fails open if the API is unreachable.
 
-![Email Gate](./public/screenshots/email-gate.png)
+![Email Gate](https://github.com/RadifMasud/Covenant/blob/main/public/screenshots/email-gate.png)
 
 ---
 
@@ -39,19 +39,19 @@ A 4-step compliance wizard with a persistent Sidecar panel. The Sidecar shows li
 
 **Step 1 — Ingest**: Select document type and scan quality.
 
-![Step 1 Ingest](./public/screenshots/workflow-step1.png)
+![Step 1 Ingest](https://github.com/RadifMasud/Covenant/blob/main/public/screenshots/workflow-step1.png)
 
 **Step 2 — Validate**: Enter Total Debt and Total Equity. D/E ratio previews inline.
 
-![Step 2 Validate](./public/screenshots/workflow-step2.png)
+![Step 2 Validate](https://github.com/RadifMasud/Covenant/blob/main/public//screenshots/workflow-step2.png)
 
 **Step 3 — Analyze**: Computed D/E ratio with threshold coloring. Sidecar shows High Risk nudge if ratio > 2.5.
 
-![Step 3 Analyze](./public/screenshots/workflow-step3.png)
+![Step 3 Analyze](https://github.com/RadifMasud/Covenant/blob/main/public/screenshots/workflow-step3.png)
 
 **Step 4 — Decide**: Approve, Flag, or Reject. Decision is recorded to telemetry with full upstream context.
 
-![Step 4 Decide](./public/screenshots/workflow-step4.png)
+![Step 4 Decide](https://github.com/RadifMasud/Covenant/blob/main/public/screenshots/workflow-step4.png)
 
 ---
 
@@ -59,7 +59,7 @@ A 4-step compliance wizard with a persistent Sidecar panel. The Sidecar shows li
 
 COO-facing view over 1,000 seeded sessions. Demonstrates that Poor scan quality drives a ~40% higher flag rate and 1.5–2x longer time-to-decision — the business case for an automated OCR pre-processor.
 
-![Admin Dashboard](./public/screenshots/admin.png)
+![Admin Dashboard](https://github.com/RadifMasud/Covenant/blob/main/public/screenshots/admin.png)
 
 > Add screenshots to `public/screenshots/` and commit. File names must match the paths above.
 
