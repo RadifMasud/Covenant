@@ -14,9 +14,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function EmailGatePage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -28,12 +31,43 @@ export default function EmailGatePage() {
     inputRef.current?.focus();
   }, [router]);
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleBlur() {
+    if (email && !EMAIL_REGEX.test(email)) {
+      setError("Please enter a valid email address.");
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!email || !email.includes("@")) {
+
+    if (!EMAIL_REGEX.test(email)) {
       setError("Please enter a valid email address.");
       return;
     }
+
+    setIsValidating(true);
+    try {
+      const res = await fetch("/api/email/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.valid) {
+          setError(data.reason ?? "Email could not be verified.");
+          trackEvent("email_gate", "validation_failed", { reason: data.reason });
+          return;
+        }
+      }
+      // Non-2xx or valid: true both proceed (fail open)
+    } catch {
+      // Network error — fail open
+    } finally {
+      setIsValidating(false);
+    }
+
     setSessionEmail(email);
     trackEvent("email_gate", "session_start", { email });
     router.push("/workflow");
@@ -60,7 +94,7 @@ export default function EmailGatePage() {
               <div className="space-y-1">
                 <Input
                   ref={inputRef}
-                  type="email"
+                  type="text"
                   placeholder="you@company.com"
                   value={email}
                   onChange={(e) => {
@@ -70,13 +104,15 @@ export default function EmailGatePage() {
                       length: e.target.value.length,
                     });
                   }}
+                  onBlur={handleBlur}
+                  disabled={isValidating}
                 />
                 {error && (
                   <p className="text-sm text-destructive">{error}</p>
                 )}
               </div>
-              <Button type="submit" className="w-full">
-                Start Session
+              <Button type="submit" className="w-full" disabled={isValidating}>
+                {isValidating ? "Verifying..." : "Start Session"}
               </Button>
             </form>
           </CardContent>
