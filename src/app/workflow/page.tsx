@@ -44,6 +44,7 @@ export default function WorkflowPage() {
   const [sessionEmail, setSessionEmail] = useState("");
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const stepStartTime = useRef<number>(Date.now());
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [einsteinState, setEinsteinState] = useState<EinsteinState>(EINSTEIN_INITIAL_STATE);
 
   const [state, setState] = useState<WorkflowState>({
@@ -72,6 +73,8 @@ export default function WorkflowPage() {
   })();
 
   function navigateToStep(next: 1 | 2 | 3 | 4, fromStep: number) {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    setEinsteinState(EINSTEIN_INITIAL_STATE);
     const dwellMs = Date.now() - stepStartTime.current;
     trackEvent(STEP_NAMES[fromStep - 1], "step_exit", {
       dwell_ms: dwellMs,
@@ -144,6 +147,9 @@ export default function WorkflowPage() {
         error: null,
       });
       trackEvent("sidecar", "einstein_analyze_success", { step });
+      hideTimerRef.current = setTimeout(() => {
+        setEinsteinState(EINSTEIN_INITIAL_STATE);
+      }, 10000);
     } catch (err) {
       const message = err instanceof Error ? err.message : "AI analysis unavailable";
       setEinsteinState({ status: "error", text: null, safetyScores: null, error: message });
